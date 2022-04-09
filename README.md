@@ -28,7 +28,7 @@ cd aws-security-workshop
 ./deploy.sh
 ```
 
-Once the deployment is complete take a note of the displayed frontend URL.
+Deployment takes around 5 minutes. Once the deployment is complete take a note of the displayed frontend URL.
 
 ### Cleanup
 

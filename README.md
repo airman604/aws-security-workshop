@@ -23,7 +23,7 @@ before the workshop!
    (**US West (Oregon)**) and open **Cloud Shell**.
 3. Clone this repository and run `deploy.sh`:
 ```bash
-git clone https://github.com/airman604/aws-security-workshop.git`
+git clone https://github.com/airman604/aws-security-workshop.git
 cd aws-security-workshop
 ./deploy.sh
 ```

@@ -32,5 +32,9 @@ Once the deployment is complete take a note of the displayed frontend URL.
 
 ### Cleanup
 
-To delete all the provisioned resources once you complete the workshop,
-run `./destroy.sh` in the **Cloud Shell** (from the cloned repository folder).
+1. Run `./destroy.sh` in the **Cloud Shell** (from the cloned repository folder).
+2. Delete any resources that you created manually during the labs:
+  * delete WAF configuration
+  * delete S3 bucket that was created for ALB logs
+  * disable **GuardDuty**
+  * delete the **CloudTrail** trail

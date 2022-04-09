@@ -17,8 +17,8 @@ To participate in the labs, you need to deploy the lab environment to your AWS a
 before the workshop!
 
 1. Create an AWS account, if you don't have one:
-  * Go to <https://aws.amazon.com/>, click **Create an AWS Account** and follow the instructions.
-  * You will need a credit card.
+    * Go to <https://aws.amazon.com/>, click **Create an AWS Account** and follow the instructions.
+    * You will need a credit card.
 2. Login into your AWS account, then in the top right corner switch to `us-west-2` region
    (**US West (Oregon)**) and open **Cloud Shell**.
 3. Clone this repository and run `deploy.sh`:
@@ -34,7 +34,7 @@ Once the deployment is complete take a note of the displayed frontend URL.
 
 1. Run `./destroy.sh` in the **Cloud Shell** (from the cloned repository folder).
 2. Delete any resources that you created manually during the labs:
-  * delete WAF configuration
-  * delete S3 bucket that was created for ALB logs
-  * disable **GuardDuty**
-  * delete the **CloudTrail** trail
+    * delete WAF configuration
+    * delete S3 bucket that was created for ALB logs
+    * disable **GuardDuty**
+    * delete the **CloudTrail** trail

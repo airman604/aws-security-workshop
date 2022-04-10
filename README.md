@@ -7,8 +7,8 @@ Welcome to the AWS Security 101 workshop.
 You will use your own AWS account to provision the lab environment. We provide
 the provisioning and de-provisioning scripts to make the process easier, and
 to ensure all the resources are deleted once you complete the workship to
-minimize any costs. PLEASE NOTE, YOU ARE RESPONSIBLE FOR ANY AWS CHARGES RELATED
-TO YOUR USE OF THE GUIDES AND SCRIPTS IN THIS REPOSITORY. Having said that, such
+minimize any costs. **PLEASE NOTE, YOU ARE RESPONSIBLE FOR ANY AWS CHARGES RELATED
+TO YOUR USE OF THE GUIDES AND SCRIPTS IN THIS REPOSITORY.** Having said that, such
 charges should be minimal.
 
 ### Deployment

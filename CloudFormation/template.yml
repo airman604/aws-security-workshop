@@ -1,0 +1,472 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: DC604 AWS Security Workshop
+
+Parameters:
+
+  pVPCCIDR:
+    Type: String
+    Default: 10.0.0.0/22
+
+  pPublicSubnetCIDR1:
+    Type: String
+    Default: 10.0.0.0/24
+
+  pPublicSubnetCIDR2:
+    Type: String
+    Default: 10.0.1.0/24
+
+  pInstanceType:
+    Type: String
+    Default: t3.micro
+
+  pTagName:
+    Type: String
+    Default: DC604-AWS-Security-Workshop
+
+  pDBName:
+    Type: String
+    Default: Msg
+
+  pDBUser:
+    Type: String
+    Default: dbuser
+
+  pDBPassword:
+    Type: String
+    NoEcho: true
+
+Mappings:
+
+  RegionMap:
+    us-west-1:
+      AMI: ami-0573b70afecda915d
+      InstanceConnectCIDR: 13.52.6.112/29
+    us-west-2:
+      AMI: ami-0341aeea105412b57
+      InstanceConnectCIDR: 18.237.140.160/29
+    us-east-1:
+      AMI: ami-033b95fb8079dc481
+      InstanceConnectCIDR: 18.206.107.24/29
+    us-east-2:
+      AMI: ami-0b614a5d911900a9b
+      InstanceConnectCIDR: 3.16.146.0/29
+    ca-central-1:
+      AMI: ami-07140ec01fc325690
+      InstanceConnectCIDR: 35.183.92.176/29
+
+Resources:
+
+  # EC2 resources
+
+  FrontEnd1LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpPutResponseHopLimit: 2
+      LaunchTemplateName: FrontEnd1LaunchTemplate
+
+  FrontEnd1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [ RegionMap, !Ref AWS::Region, AMI ]
+      InstanceType: !Ref pInstanceType
+      IamInstanceProfile: !Ref FrontEndInstanceProfile
+      SecurityGroupIds:
+        - !Ref FrontEndSG
+      SubnetId: !Ref PublicSubnet1
+      LaunchTemplate:
+        LaunchTemplateId: !Ref FrontEnd1LaunchTemplate
+        Version: 1
+      Tags:
+        - Key: Name
+          Value: !Join ['_', [!Ref pTagName, FrontEnd1]]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+
+          # log output for debugging purposes
+          exec > /tmp/userdata.log 2>&1
+
+          yum update -y
+          amazon-linux-extras install docker
+          systemctl enable docker
+          systemctl start docker
+
+          docker run --detach \
+            -p 8080:8080 \
+            --restart always \
+            --name workshop-frontend \
+            --env WS_MODE=frontend \
+            --env WS_PORT=8080 \
+            --env WS_BACKEND_URL="http://${BackEnd.PrivateIp}:8080" \
+            --env WS_DB_HOST="${DBServer.PrivateIp}" \
+            --env WS_DB_PORT=3306 \
+            --env WS_LB_URL="http://${ALB.DNSName}" \
+            --env WS_LB_ARN="${ALB}" \
+            --env WS_BUCKET_FRONTEND="${FrontendBucket}" \
+            --env WS_BUCKET_SECRET="${SecretBucket}" \
+            dc604/aws-workshop-web-service
+
+
+  BackEnd:
+    Type: AWS::EC2::Instance
+    DependsOn: DBServer
+    Properties:
+      ImageId: !FindInMap [ RegionMap, !Ref AWS::Region, AMI ]
+      InstanceType: !Ref pInstanceType
+      SecurityGroupIds:
+        - !Ref BackEndSG
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Join ['_', [!Ref pTagName, BackEnd]]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+
+          # log output for debugging purposes
+          exec > /tmp/userdata.log 2>&1
+
+          yum update -y
+          amazon-linux-extras install docker
+          systemctl enable docker
+          systemctl start docker
+
+          docker run --detach \
+            -p 8080:8080 \
+            --restart always \
+            --name workshop-backend \
+            --env WS_MODE=backend \
+            --env WS_PORT=8080 \
+            --env WS_DB_HOST="${DBServer.PrivateIp}" \
+            --env WS_DB_PORT=3306 \
+            --env WS_DB_NAME="${pDBName}" \
+            --env WS_DB_USER="${pDBUser}" \
+            --env WS_DB_PASSWORD="${pDBPassword}" \
+            dc604/aws-workshop-web-service
+
+  DBServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [ RegionMap, !Ref AWS::Region, AMI ]
+      InstanceType: !Ref pInstanceType
+      SecurityGroupIds:
+        - !Ref DBServerSG
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Join ['_', [!Ref pTagName, DBServer]]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+
+          # log output for debugging purposes
+          exec > /tmp/userdata.log 2>&1
+
+          yum update -y
+          amazon-linux-extras install docker
+          systemctl enable docker
+          systemctl start docker
+
+          docker run --detach \
+            -p 3306:3306 \
+            --restart always \
+            --name workshop-mariadb \
+            --env MARIADB_USER=${pDBUser} \
+            --env MARIADB_PASSWORD=${pDBPassword} \
+            --env MARIADB_RANDOM_ROOT_PASSWORD=yes \
+            --env MARIADB_DATABASE=${pDBName} \
+            mariadb
+
+  FrontEndSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Front End Security Group
+      GroupName: FrontEndSG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !FindInMap [ RegionMap, !Ref AWS::Region, InstanceConnectCIDR ]
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: "0.0.0.0/0"
+          # SourceSecurityGroupId: !Ref ALBSG
+      VpcId: !Ref VPC
+
+  BackEndSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Back End Security Group
+      GroupName: BackEndSG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !FindInMap [ RegionMap, !Ref AWS::Region, InstanceConnectCIDR ]
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: "0.0.0.0/0"
+      VpcId: !Ref VPC
+
+  DBServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Database Server Security Group
+      GroupName: DBServerSG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !FindInMap [ RegionMap, !Ref AWS::Region, InstanceConnectCIDR ]
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: "0.0.0.0/0"
+      VpcId: !Ref VPC
+
+  # Network resources
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref pVPCCIDR
+      Tags:
+        - Key: Name
+          Value: !Ref pTagName
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref pPublicSubnetCIDR1
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Ref pTagName
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref pPublicSubnetCIDR2
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Ref pTagName
+
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref pTagName
+
+  IGWAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC
+
+  RouteTablePubSubnet:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Ref pTagName
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: IGWAttach
+    Properties:
+       RouteTableId: !Ref RouteTablePubSubnet
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref IGW
+
+  RouteTableAssocPubSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePubSubnet
+      SubnetId: !Ref PublicSubnet1
+
+  RouteTableAssocPubSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePubSubnet
+      SubnetId: !Ref PublicSubnet2
+
+  # IAM Resources
+
+  FrontEndEC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: FrontEndEC2Role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: FrontEndEC2Policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:Describe*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - guardduty:Describe*
+                  - guardduty:Get*
+                  - guardduty:List*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - cloudtrail:Describe*
+                  - cloudtrail:Get*
+                  - cloudtrail:List*
+                Resource: "*"
+
+  FrontEndInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref FrontEndEC2Role
+
+  # Application Load Balancer resources
+
+  ALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Application Load Balancer Security Group
+      GroupName: ALBSG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: DC604SecurityWorkshop-ALB
+      IpAddressType: ipv4
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !Ref ALBSG
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+
+  BackEndRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: forward
+          ForwardConfig:
+            TargetGroups:
+              - TargetGroupArn: !Ref BackEndTargetGroup
+                Weight: 1
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - /backend
+      ListenerArn: !Ref HTTPListener
+      Priority: 1
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: DC604-FrontEndTG
+      HealthCheckEnabled: true
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /
+      Port: 8080
+      Protocol: HTTP
+      Targets:
+        - Id: !Ref FrontEnd1
+      TargetType: instance
+      VpcId: !Ref VPC
+
+  BackEndTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: DC604-BackEndTG
+      HealthCheckEnabled: true
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /backend
+      Port: 8080
+      Protocol: HTTP
+      Targets:
+        - Id: !Ref BackEnd
+      TargetType: instance
+      VpcId: !Ref VPC
+
+
+  # S3 buckets for IAM lab - "frontend"
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:   # https://stackoverflow.com/a/68717631
+        !Sub
+          - 'aws-sec-101-frontend-${RandomGUID}'
+          - { RandomGUID: !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId ]]]] }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # S3 buckets for IAM lab - "secret"
+  SecretBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:   # https://stackoverflow.com/a/68717631
+        !Sub
+          - 'aws-sec-101-secret-${RandomGUID}'
+          - { RandomGUID: !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId ]]]] }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+
+Outputs:
+  FrontendURL:
+    Value: !Sub "http://${ALB.DNSName}"

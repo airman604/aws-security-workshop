@@ -24,40 +24,7 @@ connect to it.
 Review the "check progress" page to ensure your configuration is correct - "Database Security Group",
 "Frontend Security Group", and "Backend Security Group" should show "OK" status.
 
-## Lab 3 - EC2 Instance Metadata
-
-Disable version 1 of the Instance Metadata Service (IMDSv1) and only allow token-backed metadata requests (i.e. v2) on all EC2 instances (i.e. frontend and backend web services).
-
-Tip: this cannot be done from the AWS Console, use AWS CLI or Cloud Shell.
-
-Reference: <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances>
-
-## Lab 4 - WAF
-
-1. Add WAF configuration to the load balancer.
-2. Make sure to pick the right Region (us-west-2 aka US West (Oregon) by default).
-3. Attach to the load balancer that is part of our application.
-4. Enable "Core rule set" and "SQL database" managed rules.
-
-## Lab 5 - ALB Access Logs
-
-1. Enable access logging on the load balancer.
-2. Make some requests to the web application (i.e. generate some logs).
-3. Wait for the log file to appear in S3, download and check contents.
-
-Bonus reference (not part of these labs): querying ALB logs in Athena <https://docs.aws.amazon.com/athena/latest/ug/application-load-balancer-logs.html>
-
-## Lab 6 - GuardDuty
-
-1. Enable GuardDuty on the account.
-2. Check what alerts are being raised for the frontend web service. (It will take several minutes for the alerts
-   to appear in the GuardDuty console).
-
-## Lab 7 - CloudTrail
-
-Open CloudTrail settings and create a new trail.
-
-## Lab 8 - IAM
+## Lab 3 - IAM
 
 In this lab we will limit S3 permissions that are assigned to the frontend web service.
 
@@ -69,6 +36,39 @@ In this lab we will limit S3 permissions that are assigned to the frontend web s
 6. Expand S3 and restrict access to only "frontend" S3 bucket (check the bucket name of the "frontend" bucket,
     switch Resources setting to Specific, specify the "frontend" bucket name).
 7. Save the policy.
+
+## Lab 4 - EC2 Instance Metadata
+
+Disable version 1 of the Instance Metadata Service (IMDSv1) and only allow token-backed metadata requests (i.e. v2) on all EC2 instances (i.e. frontend and backend web services).
+
+Tip: this cannot be done from the AWS Console, use AWS CLI or Cloud Shell.
+
+Reference: <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances>
+
+## Lab 5 - WAF
+
+1. Add WAF configuration to the load balancer.
+2. Make sure to pick the right Region (us-west-2 aka US West (Oregon) by default).
+3. Attach to the load balancer that is part of our application.
+4. Enable "Core rule set" and "SQL database" managed rules.
+
+## Lab 6 - ALB Access Logs
+
+1. Enable access logging on the load balancer.
+2. Make some requests to the web application (i.e. generate some logs).
+3. Wait for the log file to appear in S3, download and check contents.
+
+Bonus reference (not part of these labs): querying ALB logs in Athena <https://docs.aws.amazon.com/athena/latest/ug/application-load-balancer-logs.html>
+
+## Lab 7 - GuardDuty
+
+1. Enable GuardDuty on the account.
+2. Check what alerts are being raised for the frontend web service. (It will take several minutes for the alerts
+   to appear in the GuardDuty console).
+
+## Lab 8 - CloudTrail
+
+Open CloudTrail settings and create a new trail.
 
 ## Lab 9 - ScoutSuite (Optional)
 

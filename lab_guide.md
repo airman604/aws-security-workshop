@@ -45,20 +45,20 @@ Tip: this cannot be done from the AWS Console, use AWS CLI or Cloud Shell.
 
 Reference: <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances>
 
-## Lab 5 - WAF
-
-1. Add WAF configuration to the load balancer.
-2. Make sure to pick the right Region (us-west-2 aka US West (Oregon) by default).
-3. Attach to the load balancer that is part of our application.
-4. Enable "Core rule set" and "SQL database" managed rules.
-
-## Lab 6 - ALB Access Logs
+## Lab 5 - ALB Access Logs
 
 1. Enable access logging on the load balancer.
 2. Make some requests to the web application (i.e. generate some logs).
 3. Wait for the log file to appear in S3, download and check contents.
 
 Bonus reference (not part of these labs): querying ALB logs in Athena <https://docs.aws.amazon.com/athena/latest/ug/application-load-balancer-logs.html>
+
+## Lab 6 - WAF
+
+1. Add WAF configuration to the load balancer.
+2. Make sure to pick the right Region (us-west-2 aka US West (Oregon) by default).
+3. Attach to the load balancer that is part of our application.
+4. Enable "Core rule set" and "SQL database" managed rules.
 
 ## Lab 7 - GuardDuty
 

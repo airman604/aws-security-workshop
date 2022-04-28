@@ -77,6 +77,9 @@ Run ScoutSuite against your AWS account and review the findings.
 1. Install ScoutSuite by following insructions at <https://github.com/nccgroup/ScoutSuite/wiki/Setup>:
 
 ``` bash
+# you might need to install virtualenv first
+# if that's the case, run:
+# sudo pip3 install virtualenv
 virtualenv -p python3 venv
 source venv/bin/activate
 pip install scoutsuite
